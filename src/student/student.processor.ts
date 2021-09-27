@@ -2,18 +2,35 @@ import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import * as XLSX from 'xlsx';
+import {
+  ClientProxy,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 
 @Processor('create-students')
 export class StudentProcessor {
   private readonly logger = new Logger(StudentProcessor.name);
+  private client: ClientProxy;
+
+  constructor() {
+    this.client = ClientProxyFactory.create({
+      transport: Transport.TCP,
+    });
+  }
 
   @Process('transcode')
-  handleTranscode(job: Job) {
+  async handleTranscode(job: Job) {
     this.logger.debug('Converting file tp JSON...');
     const studentsAry = this.readUploadedFile(job.data.file);
     const studentsAryWithAge = this.calculateAge(studentsAry);
-    //TODO: Send to buld Insert
     console.log(studentsAryWithAge);
+    await this.client
+      .send('createBulk', studentsAryWithAge)
+      .subscribe((res) => {
+        console.log(res);
+        // Send notification once the job is completed.
+      });
     this.logger.debug('Process Complated...');
   }
 
