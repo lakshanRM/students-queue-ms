@@ -2,7 +2,6 @@ import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { StudentModule } from './student/student.module';
 import { StudentProcessor } from './student/student.processor';
-
 @Module({
   imports: [
     BullModule.forRoot({

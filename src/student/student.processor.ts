@@ -7,7 +7,9 @@ import {
   ClientProxyFactory,
   Transport,
 } from '@nestjs/microservices';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 
+@WebSocketGateway()
 @Processor('create-students')
 export class StudentProcessor {
   private readonly logger = new Logger(StudentProcessor.name);
@@ -19,19 +21,23 @@ export class StudentProcessor {
     });
   }
 
+  @WebSocketServer()
+  server;
+
   @Process('transcode')
   async handleTranscode(job: Job) {
     this.logger.debug('Converting file tp JSON...');
     const studentsAry = this.readUploadedFile(job.data.file);
     const studentsAryWithAge = this.calculateAge(studentsAry);
-    console.log(studentsAryWithAge);
+
     await this.client
       .send('createBulk', studentsAryWithAge)
       .subscribe((res) => {
-        console.log(res);
-        // Send notification once the job is completed.
+        if (res.status == 'success') {
+          this.server.emit('message', 'Upload Complete.');
+          this.logger.debug('Process Complated...');
+        }
       });
-    this.logger.debug('Process Complated...');
   }
 
   readUploadedFile(filePath: string) {
